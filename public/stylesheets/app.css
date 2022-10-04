@@ -7,3 +7,15 @@ body {
   padding: 10px;
   background: #FFFF99;
 }
+
+.inline {
+  display: inline-block;
+}
+
+li {
+  margin: 5px 0;
+}
+
+.signin {
+  list-style: none;
+}

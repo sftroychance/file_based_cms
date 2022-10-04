@@ -40,10 +40,14 @@ def data_path
 end
 
 get '/' do
-  @files = Dir.glob(File.join(data_path, "*"))
-              .map { |filename| File.basename(filename) }
+  if session[:user]
+    @files = Dir.glob(File.join(data_path, "*"))
+                .map { |filename| File.basename(filename) }
 
-  erb :index
+    erb :index
+  else
+    erb :login
+  end
 end
 
 get '/new' do
@@ -54,17 +58,30 @@ post '/new' do
   filename = params[:new_filename]
 
   path = File.join(data_path, filename)
-  if File.exists?(path)
+  if filename.strip == ''
+    session[:message] = 'A name is required.'
+    status 422
+    erb :new_file
+  elsif File.exists?(path)
     session[:message] = "File already exists."
+    status 422
     erb :new_file
   elsif !(filename.include?('.txt') || filename.include?('.md') )
     session[:message] = "You must add an extension: .md or .txt"
+    status 422
     erb :new_file
   else
     File.open(path, 'w') {}
+    session[:message] = "#{filename} was created."
     redirect '/'
   end
+end
 
+post '/delete/:filename' do |filename|
+  path = File.join(data_path, filename)
+  File.delete(path)
+  session[:message] = "#{filename} was deleted."
+  redirect '/'
 end
 
 get '/:filename' do |filename|
@@ -91,5 +108,27 @@ post '/:filename' do |filename|
   File.write(@filepath, params[:content])
 
   session[:message] = "#{filename} has been updated"
+  redirect '/'
+end
+
+get '/users/signin' do
+  erb :user_login
+end
+
+post '/users/signin' do
+  if params[:username] == 'admin' and params[:password] == 'secret'
+    session[:user] = params[:username]
+    session[:message] = 'Welcome!'
+    redirect '/'
+  else
+    session[:message] = 'Invalid credentials'
+    status 422
+    erb :user_login
+  end
+end
+
+post '/user/signout' do
+  session.delete(:user)
+  session[:message] = 'You have been signed out.'
   redirect '/'
 end

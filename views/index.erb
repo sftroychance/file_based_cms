@@ -8,9 +8,19 @@
       <a href="/<%= file %>/edit">
         Edit file
       </a>
+      --
+      <form method="post" action="/delete/<%= file %>" class="inline">
+        <button type="submit">Delete file</button>
+      </form>
     </li>
   <% end %>
 </ul>
 <p>
   <a href="/new">New Document</a>
 </p>
+<div>
+  <em>Signed in as <%= session[:user] %>.</em>
+  <form method="post" action="/user/signout" class="inline">
+    <button type="submit">Sign Out</button>
+  </form>
+</div>
