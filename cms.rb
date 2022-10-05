@@ -2,6 +2,8 @@ require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'tilt/erubis'
 require 'redcarpet'
+require 'yaml'
+require 'bcrypt'
 
 configure do
   enable :sessions
@@ -39,18 +41,59 @@ def data_path
   end
 end
 
+def signed_in?
+  !session[:user].nil?
+end
+
+def redirect_if_not_signed_in
+  unless signed_in?
+    session[:message] = 'You must be signed in to do that.'
+    redirect '/'
+  end
+end
+
+def authorized_users
+  YAML.load_file('users.yml')
+end
+
+def load_user_credentials
+  credentials_file =
+    if ENV['RACK_ENV'] == 'test'
+      project_root + '/test/users.yml'
+    else
+      project_root + '/users.yml'
+    end
+  YAML.load_file(credentials_file)
+end
+
+def valid_credentials?(username, password)
+  credentials = load_user_credentials
+
+  if credentials[username]
+    BCrypt::Password.new(credentials[username]) == password
+  else
+    false
+  end
+end
+
+# home page
 get '/' do
   @files = Dir.glob(File.join(data_path, "*"))
                 .map { |filename| File.basename(filename) }
-
   erb :index
 end
 
+# go to page to create new file
 get '/new' do
+  redirect_if_not_signed_in
+
   erb :new_file
 end
 
+# create new file
 post '/new' do
+  redirect_if_not_signed_in
+
   filename = params[:new_filename]
 
   path = File.join(data_path, filename)
@@ -73,13 +116,17 @@ post '/new' do
   end
 end
 
+# delete file
 post '/delete/:filename' do |filename|
+  redirect_if_not_signed_in
+
   path = File.join(data_path, filename)
   File.delete(path)
   session[:message] = "#{filename} was deleted."
   redirect '/'
 end
 
+# view file contents
 get '/:filename' do |filename|
   path = File.join(data_path, filename)
 
@@ -91,14 +138,20 @@ get '/:filename' do |filename|
   end
 end
 
+# go to page to edit file contents
 get '/:filename/edit' do |filename|
+  redirect_if_not_signed_in
+
   @filepath = File.join(data_path, filename)
   @filename = filename
 
   erb :edit_file
 end
 
+# update edited file
 post '/:filename' do |filename|
+  redirect_if_not_signed_in
+
   @filepath = File.join(data_path, filename)
 
   File.write(@filepath, params[:content])
@@ -107,12 +160,14 @@ post '/:filename' do |filename|
   redirect '/'
 end
 
+# go to login page
 get '/users/signin' do
   erb :user_login
 end
 
+# log in
 post '/users/signin' do
-  if params[:username] == 'admin' and params[:password] == 'secret'
+  if valid_credentials?(params[:username], params[:password])
     session[:user] = params[:username]
     session[:message] = 'Welcome!'
     redirect '/'
@@ -123,6 +178,7 @@ post '/users/signin' do
   end
 end
 
+# log out
 post '/users/signout' do
   session.delete(:user)
   session[:message] = 'You have been signed out.'
