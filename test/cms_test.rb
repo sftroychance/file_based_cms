@@ -42,7 +42,6 @@ class CMSTest < MiniTest::Test
     get '/'
     assert_equal 200, last_response.status
     assert_equal 'text/html;charset=utf-8', last_response['Content-Type']
-    p last_response.headers
     assert_includes last_response.body, 'changes.txt'
     assert_includes last_response.body, 'about.md'
   end
