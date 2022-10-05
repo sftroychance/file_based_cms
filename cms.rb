@@ -40,14 +40,10 @@ def data_path
 end
 
 get '/' do
-  if session[:user]
-    @files = Dir.glob(File.join(data_path, "*"))
+  @files = Dir.glob(File.join(data_path, "*"))
                 .map { |filename| File.basename(filename) }
 
-    erb :index
-  else
-    erb :login
-  end
+  erb :index
 end
 
 get '/new' do
@@ -127,7 +123,7 @@ post '/users/signin' do
   end
 end
 
-post '/user/signout' do
+post '/users/signout' do
   session.delete(:user)
   session[:message] = 'You have been signed out.'
   redirect '/'
